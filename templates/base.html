@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RaspberryPi Remote Control</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="assets/bootstrap.min.css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="assets/jquery.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="assets/bootstrap.min.js"></script>
+	<script src="assets/jquery.nouislider.min.js"></script>
+	<link href="assets/jquery.nouislider.css" rel="stylesheet">  	
+
+  	<style type="text/css">
+		.panel-body {height:700px; align="middle" }
+		.slider 	{height:100%; width: 70%; margin-left: auto; margin-right: auto}
+		.noUi-vertical .noUi-handle {
+			width: 110%;
+			height: 60px;
+			top: -34px
+		}
+		.col-sm-1 { width: 15%}
+		.col-sm-8 { width: 70%}
+                .toggle { width: 50px; margin-left: auto; margin-right: auto }
+                .toggle.off .noUi-handle {border-color: red;}                
+	</style>	
+
+	
+	</head>
+  <body>
+
+	<script>
+        function onSetAJAX (servoid, pos)
+        {
+            
+            var servopos = {position: pos };
+            var servostr = JSON.stringify(servopos);
+            var areq = {
+			type: 'put',
+			url: '/servos/'+servoid,
+			contentType: 'application/json',
+			dataType: "json",
+			data: servostr,
+			async: false,
+			success: function(data){
+				}
+			}
+            $.ajax(areq);
+        }
+
+        function onShutdown()
+        {
+            var shutdown = confirm("Shutdown now?");
+            if (shutdown)
+            {
+                var sh_arg = { };
+                var sh_str = JSON.stringify(sh_arg);
+                var areq = {
+                            type: 'put',
+                            url: '/command/shutdown',
+                            contentType: 'application/json',
+                            dataType: "json",
+                            data: sh_str,
+                            async: false,
+                            success: function(data){
+                                    }
+                            }
+                $.ajax(areq);
+            }
+            return(shutdown);
+        }
+
+	function onSet ()
+	{
+            var id = this.id;               
+            var jq = $("#"+id);
+            var pos = Math.round(jq.val());
+
+            onSet_base (id, pos);
+        }
+                 
+	function onSlide ()
+	{
+                var id = this.id;               
+		var jq = $("#"+id);
+		var pos = Math.round(jq.val());
+                onSet_base(id, pos);
+	}
+                 
+        function onSet_base(id, pos)
+        {
+              onSetAJAX (id, pos);
+                
+              if (id == "2")
+              { // Check the servo 3 and correct its rotation to prevent negative camber
+                 var jq3 = $("#3");
+                 var jq2 = $("#2");                
+                 var pos3 = Math.round(jq3.val());
+                 var pos2 = Math.round(jq2.val());
+                 if (pos2*pos3 > 0)
+                 {
+                   pos3 = -pos3;
+                   jq3.val(pos3, { set: true });
+                   onSetAJAX (3,pos3);
+                  }
+
+              }       
+        }
+                 
+        function getIntervalFromFPS(fps)
+        {
+            var nReturns = 500/fps; // double the scan freq
+            return(nReturns);
+        }
+        function fps_slider_onSlide ()
+        {
+            var jq = $("#fps_slider");
+            var pos = jq.val();
+
+            clearInterval(window.timer_id);
+            if (pos != 0)
+                window.timer_id = setInterval(updateImage, getIntervalFromFPS(pos));
+            
+        }
+        function onDeviceOrientation(e)
+        {
+            var multiplier = 2;
+            var beta = multiplier*e.beta;
+            var gamma = multiplier*-e.gamma;
+
+            var jq = $("#slider-toggle");
+            var pos = Math.round(jq.val());
+
+            if (pos == 1)
+            {
+                var rudder = $("#1");
+                var mainsheet = $("#2");
+                
+                rudder.val(Math.round(gamma), { set: true });
+                mainsheet.val(Math.round(beta), { set: true });
+            }
+            
+        }
+        function onToggle(){
+            var jq = $("#slider-toggle");
+            var pos = Math.round(jq.val());
+            jq.toggleClass('off', pos === 1);
+         }
+                 
+	</script>
+	<script>
+	$(function(){
+                var rMainSheet = { 'min': -45, 	'max': 45 };
+                var rRudder = { 'min': -65, 	'max': 65 };
+		var rCamber = { 'min': -35, 	'max': 35 };
+                var oBase = { 	start: [ 0 ], 
+				orientation: "vertical" ,
+				serialization: {lower: [ toolTip ]},
+				direction: "rtl",
+				step: 1
+			   };
+
+                var oMainSheet = oBase; oMainSheet.range=rMainSheet;             
+		var slider = $('#1').noUiSlider(oMainSheet);
+		slider.on({slide: onSlide, set: onSet});
+                
+                var oRudder=oBase; oBase.range = rRudder;
+                slider = $('#2').noUiSlider(oRudder);
+		slider.on({slide: onSlide, set: onSet});
+
+                var oCamber=oBase;oCamber.range=rCamber;
+                slider = $('#3').noUiSlider(oCamber);
+		slider.on({slide: onSlide});                
+                
+                
+                var fps_slider = $("#fps_slider").noUiSlider (
+                   { start: [1], range: { 'min': 0, 'max': 10}, orientation: "horizontal",
+                     step: 1, serialization: {lower: [ toolTip ]},});
+                fps_slider.on({slide: fps_slider_onSlide});
+
+                var toggle = $("#slider-toggle").noUiSlider({
+                        orientation: "horizontal",
+                        start: 0,
+                        range: {'min': [0, 1],
+                                'max': 1
+                                }
+                        //,format: wNumb({ decimals: 0 })
+                })
+                toggle.addClass('toggle');
+                toggle.on({slide: onToggle });
+	});
+	var toolTip = $.Link({	target: '-tooltip-'	});
+	
+	window.onload = function() {
+            timer_id = setInterval(updateImage, getIntervalFromFPS(1));
+            window.addEventListener("deviceorientation", onDeviceOrientation);
+        }
+
+
+
+	function updateImage() {
+                
+		var image = document.getElementById("camera_img");
+                if (image.complete)
+                    image.src = image.src.split("?")[0] + "?" + new Date().getTime();
+	}
+
+	
+	</script>
+
+      <div class="row" >
+        <div class="col-sm-1" >
+          <div class="panel panel-default">
+
+            <div class="panel-body servo-panel-body">
+                 <div style="text-align:center">Touch -------- Tilt</div>
+                 <br>
+                 <div class="toggle" id="slider-toggle" ></div>
+                 <hr>                 
+                 <div style="text-align:center">
+                 Rudder
+                 </div>
+              	<div class="slider" id="1" style="height: 80%"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="col-sm-8" >
+          <div class="panel panel-default">
+            <div class="panel-body">
+			<img src="/camera/capture.jpg" style="display: block; margin-left: auto; margin-right: auto; height: 100%" id="camera_img" >             
+
+            <div class="fps_slider" id="fps_slider" ></div>
+             </div>                
+          </div>
+ 
+        </div>
+
+        <div class="col-sm-1">
+          <div class="panel panel-default">
+            <div class="panel-body servo-panel-body">
+                           <div style="text-align:center">Main Sheet</div>
+			   <div class="slider" id="2" style="height: 55%" vertical-align=top></div>
+                           <hr>
+                           <div style="text-align:center">Camber</div>
+                           <div class="slider" id="3" style="height: 25%" vertical-align=bottom></div>
+                           <hr>
+                           <div style="text-align:center">
+                             <a href="javascript:onShutdown();">Shutdown</a>
+                           </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+	  
+  </body>
+</html>
