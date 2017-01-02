@@ -7,8 +7,8 @@ The model sailboat is a monohull (length ~75cm) with a rigid wing sail.
 The rigid wing sail changes its shape by bending 
 itself around the midpoint of the chord.
 
-The remote control software is web based.
-It has sliders for mainsheet and rudder.
+The remote control software is a web application that uses jquery and bootstrap.
+It has slider controls for the mainsheet and the rudder.
 It also has the a slider for setting the bend angle of the wing sail.
 It also displays the camera feed if a camera is present.
 
@@ -26,10 +26,17 @@ and control the boat via a web browser.
 
 Version 2: 
 Planned on 1.1.2017
-Goals: Make it 3D printable, make the hardware & boat smaller, turn it into a foiling catamaran.
+Goals: Make it 3D printable, make the hardware & boat smaller, turn it into a foiling catamaran, 
+add a wind direction sensor and accelerometer, use it to adjust wing sail & rudder angle and capsize prevention.  
 
-Status: Ported it to raspberrypi 0 using this article.
+Status: 
+Jan 2, 2017: Ported it to raspberrypi 0 using this article.
 https://help.ubuntu.com/community/WifiDocs/WirelessAccessPoint
+I had to change up/down events in the interfaces file to add metric for default gateway. 
+Otherwise, dual wifi cards would not route.
+Replaced adafruit servo controller with pigpio library, eliminating the need for the hardware. 
+The servo's still work very well w/o any jitter.
+
 
 
 
