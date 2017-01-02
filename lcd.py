@@ -2,8 +2,7 @@
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask import render_template, request, Response
-from adafruit.Adafruit_PWM_Servo_Driver import PWM
-#from flask.ext.socketio import SocketIO
+#from adafruit.Adafruit_PWM_Servo_Driver import PWM
 import time
 import sys
 import picamera
@@ -11,29 +10,31 @@ import threading
 import os
 import io
 import gc
-
-#Test
+import pigpio
+import logging
+import subprocess
 
 servos = [
     {
         'id': 1,
-        'position': 0
+        'position': 0,
+        'gpio' : 23
     },
     {
         'id': 2,
-        'position': 0
+        'position': 0,
+        'gpio' : 24
     },
     {
         'id': 3,
-        'position': 0
+        'position': 0,
+        'gpio' : 25        
     }
     
 ]
 
 
 app = Flask(__name__, static_url_path='/templates');
-#app.config['SECRET_KET']='secret';
-#socketio = SocketIO(app);
 
 class AppContext:
     image_mime="image/jpeg";
@@ -48,11 +49,29 @@ class AppContext:
         responded = None;
         captured = None;
         
-    pwm = PWM(0x40)
+    def initPigpio(self):
+	pi = pigpio.pi()
+	if pi.connected:
+            self.pi = pi
+        else:
+            subprocess.Popen("pigpiod")
+            time.sleep(20)
+            self.pi = pigpio.pi()
+        for item in servos:
+            self.pi.set_mode(item['gpio'],pigpio.OUTPUT)
+
+
+    def initAdafruitPWM(self):
+        self.pwm = PWM(0x40)
+        self.pwm.setPWMFreq(60);
+
     def __init__(self):
         if (self.camera is not None):
             self.camera.resolution = (400,240)
-        self.pwm.setPWMFreq(60);
+        self.initPigpio()            
+
+        logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
         
 app_ctx = AppContext();
 
@@ -95,9 +114,17 @@ if (app_ctx.camera is not None):
     t = threading.Thread(target=captureCamWorker);
     t.start();
 
-def rotateServo(servo, degree):
+def rotateServo(servo, angle):
+    #app_ctx.pwm.setPWM (servo, 0, int(pulse4096));
+    angle = int(angle)
+    pw = 1500+(angle*11.111)
+    app_ctx.pi.set_servo_pulsewidth(servos[servo]['gpio'], pw)
+
+
+def rotateServoAdafruit(servo, degree):
     pulse4096 = degree*2.9+370
     app_ctx.pwm.setPWM (servo, 0, int(pulse4096));
+
 
 for item in servos:
     rotateServo(item['id']-1, item['position'])
