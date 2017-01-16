@@ -20,7 +20,7 @@ The bend angle of the wing sail is not controlled my any tilt, it is usualy
 left at a fixed setting.
 The camera slider controls the frame rate. 
 
-The hardware is a raspberrypi 2. It is connected to a adafruit 12 channel servo controller.
+The hardware is a raspberrypi 2. 
 The raspberrypi is setup as a wifi hotspot. That way you can connect to it via any device 
 and control the boat via a web browser.
 
@@ -35,7 +35,7 @@ https://help.ubuntu.com/community/WifiDocs/WirelessAccessPoint
 I had to change up/down events in the interfaces file to add metric for default gateway. 
 Otherwise, dual wifi cards would not route.
 Replaced adafruit servo controller with pigpio library, eliminating the need for the hardware. 
-The servo's still work very well w/o any jitter.
+The servo's still works very well w/o any jitter.
 
 
 
