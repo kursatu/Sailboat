@@ -1,4 +1,4 @@
-# Remote control software for a Sailboat
+# Remote control software for a model Sailboat
 
 Here is the software I've developed for a remote controlled model sailboat.
 The software and the sail boat is in working condition.
